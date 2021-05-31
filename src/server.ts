@@ -22,7 +22,7 @@ const io: socketIO.Server = new socketIO.Server(server)
 const ws_ns: socketIO.Namespace = io.of("/");
 
 
-exp.set("port", parseInt(process.env.HTTP_PORT!) || 3000);
+exp.set("port", parseInt(process.env.HTTP_PORT!) || 3014);
 
 
 
