@@ -6,6 +6,8 @@ import {
     ERROR_CODES 
 }                                   from "./interfaces";
 
+import {terminate} from "../utility/temporal_terminate";
+
 import type {Request, Response}     from "express";
 
 
@@ -61,8 +63,8 @@ const runWorkflow = async (req: Request, res: Response) => {
 
     const url = WORKFLOW_ENGINE_API_ROOT + "/run" + `?workflow=${JSON.stringify(json)}`;
     let r = await axios.get(url).catch(e=>err=e);
-
-    if(!r){
+    
+    if(!r || !r.data){
         if(err) return res.json(GEN_FAIL([err], ERROR_CODES.NOT_IMPLEMENTED));
         else    return res.json(GEN_FAIL(["NONE"], ERROR_CODES.NOT_IMPLEMENTED));
     }
@@ -120,16 +122,15 @@ const terminateWorkflow = async (req: Request, res: Response) => {
         return res.json(GEN_FAIL(["Invalid runId or workflowId"], ERROR_CODES.INVALID_PARAMS));
     }
 
-    const url = `http://localhost:8088/api/namespaces/default/workflows/${workflowId}/${runId}/terminate`;
+    let r = await terminate(workflowId, runId, req.body.reason || "FROM UI");
 
-    let r = await axios.post(url, {reason: req.body.reason || "FROM UI"}).catch(e=>err=e);
     if(!r){
         if(err) return res.json(GEN_FAIL([err], ERROR_CODES.NOT_IMPLEMENTED));
         else    return res.json(GEN_FAIL(["NONE"], ERROR_CODES.NOT_IMPLEMENTED));
     }
 
 
-    return res.json(GEN_SUCCESS([r.data]));
+    return res.json(GEN_SUCCESS([r]));
 }
 const init = ()=>{
 
