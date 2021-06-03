@@ -53,6 +53,7 @@ export enum STATUS {
 
 export enum ERROR_CODES {
     NONE,
+    FAILED,
     EMPTY_PARAMS,
     INVALID_PARAMS,
     NOT_IMPLEMENTED,

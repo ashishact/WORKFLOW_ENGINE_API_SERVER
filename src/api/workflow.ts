@@ -15,7 +15,8 @@ import YAML                         from 'yaml'
 import axios                        from "axios";
 
 
-const WORKFLOW_ENGINE_API_ROOT = process.env.WORKFLOW_ENGINE_API_ROOT || "http://localhost:3001/api/v1";
+const WORKFLOW_ENGINE_API_ROOT = process.env.WORKFLOW_ENGINE_API_ROOT || "http://localhost:3007/api/v1";
+const TEMPORAL_API_ROOT = process.env.TEMPORAL_API_ROOT || "http://localhost:8088";
 
 
 const createWorkflow = (req: Request, res: Response) => {
@@ -33,24 +34,37 @@ const convertFormat = (json: any) => {
     }
 
     if(json.name) vjson.name = json.name;
+    if(json.timeout) vjson.timeout = json.timeout
+    // if(json.maxattempts) vjson.maxattempts = json.maxattempts
 
     if(json.main && typeof(json.main) === "object"){
         for(let [_k, _v] of Object.entries(json.main)){
             let v:any = _v;
             v.name = _k;
             vjson.steps.push(v);
-             
         }
     }
 
     return vjson;
 } 
+
+const preserveString = (s: string) => {
+    let lines = s.split("\n");
+    lines.forEach((l, i)=> {
+        let m = l.match(/(^[^"]+\:\s*")([^"]+)("\s*$)/); //  \s+call:\s+"sleep"\s+ 
+        if(m){ 
+            lines[i] = `${m[1]}\\"${m[2]}\\"${m[3]}`;
+        }
+    });
+
+    return lines.join("\n");
+}
 const runWorkflow = async (req: Request, res: Response) => {
     let err = null;
     let yaml = req.body.yaml;
     if(!yaml) return res.json(GEN_FAIL(["No yaml provided"], ERROR_CODES.INVALID_PARAMS));
 
-
+    yaml = preserveString(yaml)
     let json = YAML.parse(yaml);
 
     if(!json) return res.json(GEN_FAIL(["Invalid yaml provided"], ERROR_CODES.INVALID_PARAMS));
@@ -61,12 +75,18 @@ const runWorkflow = async (req: Request, res: Response) => {
     json = convertFormat(json);
     console.log(JSON.stringify(json));
 
-    const url = WORKFLOW_ENGINE_API_ROOT + "/run" + `?workflow=${JSON.stringify(json)}`;
-    let r = await axios.get(url).catch(e=>err=e);
+    const url = WORKFLOW_ENGINE_API_ROOT + "/run";
+    let data = JSON.stringify(json);
+    let r = await axios.post(url, data).catch(e=>err=e);
     
-    if(!r || !r.data){
+
+    if(err){
         if(err) return res.json(GEN_FAIL([err], ERROR_CODES.NOT_IMPLEMENTED));
         else    return res.json(GEN_FAIL(["NONE"], ERROR_CODES.NOT_IMPLEMENTED));
+    }
+
+    if(!r.data || r.data?.error){
+        return res.json(GEN_FAIL([r.data?.error], ERROR_CODES.FAILED));
     }
 
     return res.json(GEN_SUCCESS([r.data]));
@@ -82,10 +102,10 @@ const getWorkflowHistory = async (req: Request, res: Response) => {
         return res.json(GEN_FAIL(["Invalid runId or workflowId"], ERROR_CODES.INVALID_PARAMS));
     }
 
-    const url = `http://localhost:8088/api/namespaces/default/workflows/${workflowId}/${runId}/history?waitForNewEvent=true`;
+    const url = `${TEMPORAL_API_ROOT}/api/namespaces/default/workflows/${workflowId}/${runId}/history?waitForNewEvent=true`;
 
     let r = await axios.get(url).catch(e=>err=e);
-    if(!r){
+    if(!r || !r.data){
         if(err) return res.json(GEN_FAIL([err], ERROR_CODES.NOT_IMPLEMENTED));
         else    return res.json(GEN_FAIL(["NONE"], ERROR_CODES.NOT_IMPLEMENTED));
     }
@@ -102,10 +122,10 @@ const getWorkflowStatus = async (req: Request, res: Response) => {
         return res.json(GEN_FAIL(["Invalid runId or workflowId"], ERROR_CODES.INVALID_PARAMS));
     }
 
-    const url = `http://localhost:8088/api/namespaces/default/workflows/${workflowId}/${runId}`;
+    const url = `${TEMPORAL_API_ROOT}/api/namespaces/default/workflows/${workflowId}/${runId}`;
 
     let r = await axios.get(url).catch(e=>err=e);
-    if(!r){
+    if(!r || !r.data){
         if(err) return res.json(GEN_FAIL([err], ERROR_CODES.NOT_IMPLEMENTED));
         else    return res.json(GEN_FAIL(["NONE"], ERROR_CODES.NOT_IMPLEMENTED));
     }
@@ -123,7 +143,6 @@ const terminateWorkflow = async (req: Request, res: Response) => {
     }
 
     let r = await terminate(workflowId, runId, req.body.reason || "FROM UI");
-
     if(!r){
         if(err) return res.json(GEN_FAIL([err], ERROR_CODES.NOT_IMPLEMENTED));
         else    return res.json(GEN_FAIL(["NONE"], ERROR_CODES.NOT_IMPLEMENTED));

@@ -5,8 +5,9 @@ node_modules/
 logs/
 
 # For temporal terminate 
-temporal-headers.json
+temporal-headers*
 
+local/
 
 .env
 

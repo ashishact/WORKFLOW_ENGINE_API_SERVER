@@ -2,6 +2,7 @@ import fetch from "cross-fetch"
 import { readFileSync } from "fs"
 
 let headers:any = null;
+const TEMPORAL_API_ROOT = process.env.TEMPORAL_API_ROOT || "http://localhost:8088";
 
 try {
     let headersBuffer = readFileSync("./temporal-headers.json");
@@ -20,14 +21,18 @@ export const terminate = async (wfId: string, runId: string, reason: string) => 
     }
 
     let err:any = null;
-    let r = await fetch(`http://localhost:8088/api/namespaces/default/workflows/${wfId}/${runId}/terminate`, {
+    let r = await fetch(`${TEMPORAL_API_ROOT}/api/namespaces/default/workflows/${wfId}/${runId}/terminate`, {
         "headers": headers,
-        "referrer": `http://localhost:8088/namespaces/default/workflows/${wfId}/${runId}/summary`,
+        "referrer": `${TEMPORAL_API_ROOT}/namespaces/default/workflows/${wfId}/${runId}/summary`,
         "referrerPolicy": "strict-origin-when-cross-origin",
         "body": `{\"reason\":\"${reason}\"}`,
         "method": "POST",
         "mode": "cors"
     }).catch(e=>err=e);
+    
+    if(r.status === 403){
+        console.log(r);
+    }
 
     return r.status === 200;
 }
