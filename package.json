@@ -2,7 +2,7 @@
     "name": "api-server",
     "version": "1.0.0",
     "description": "",
-    "type": "module",
+    
     "main": "dist/server.js",
     "scripts": {
         "start": "ts-node-dev src/server.ts",
