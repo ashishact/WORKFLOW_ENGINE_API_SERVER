@@ -6,7 +6,7 @@ logs/
 
 # For temporal terminate 
 temporal-headers*
-
+*.tar.gz
 local/
 
 .env

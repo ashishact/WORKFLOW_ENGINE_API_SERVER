@@ -27,6 +27,7 @@ const getWorkflow = (req: Request, res: Response) => {
 
 }
 
+// Convert the JSON format to one that's acceptable by the Workflow Engine
 const convertFormat = (json: any) => {
     let vjson:any = {
         name: "default",
@@ -48,6 +49,13 @@ const convertFormat = (json: any) => {
     return vjson;
 } 
 
+/**
+ * YAML uses all text as strings. We would like to differentiate between variable names and literal/string constants. So whenever there is "" we enocode it as string otherwise we call is a variable
+ * e.g. "one" => this will be encoded to "\"one\"" => string constant
+ *       one  => this will not be changes and will mean a variable called one
+ * @param s yaml string
+ * @returns the same input string after conversion
+ */
 const preserveString = (s: string) => {
     let lines = s.split("\n");
     lines.forEach((l, i)=> {
@@ -59,6 +67,7 @@ const preserveString = (s: string) => {
 
     return lines.join("\n");
 }
+
 const runWorkflow = async (req: Request, res: Response) => {
     let err = null;
     let yaml = req.body.yaml;
