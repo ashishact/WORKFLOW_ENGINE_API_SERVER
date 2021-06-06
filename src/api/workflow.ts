@@ -83,7 +83,12 @@ const runWorkflow = async (req: Request, res: Response) => {
     if(!yaml) return res.json(GEN_FAIL(["No yaml provided"], ERROR_CODES.INVALID_PARAMS));
 
     yaml = preserveString(yaml)
-    let json = YAML.parse(yaml);
+    let json = null;
+    try {
+        json = YAML.parse(yaml);
+    } catch (error) {
+        console.warn("YAML ERROR: ", error);
+    }
 
     if(!json) return res.json(GEN_FAIL(["Invalid yaml provided"], ERROR_CODES.INVALID_PARAMS));
 
