@@ -42,6 +42,15 @@ const convertFormat = (json: any) => {
         for(let [_k, _v] of Object.entries(json.main)){
             let v:any = _v;
             v.name = _k;
+            
+
+            // Go doesn't have sorted map keys => Provide one
+            if(v.assign){
+                let keys = Object.keys(v.assign);
+                if(keys.length) v["assignkeys"] = keys;
+            }
+            
+            
             vjson.steps.push(v);
         }
     }
